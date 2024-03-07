@@ -1,5 +1,5 @@
-import XCTest
 @testable import NavigationKit
+import XCTest
 
 final class NavigationKitTests: XCTestCase {
     func testExample() throws {
