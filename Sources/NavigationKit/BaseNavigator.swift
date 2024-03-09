@@ -90,6 +90,7 @@ public extension BaseNavigator {
         }
         navigationControllers.first?.setViewControllers(viewControllers, animated: animated)
         navigationControllers[0].dismiss(animated: animated)
+        presentedVCWithoutNav = 0
         routes = destination
     }
 
