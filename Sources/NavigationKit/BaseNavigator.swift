@@ -2,9 +2,10 @@ import SwiftUI
 import UIKit
 
 open class BaseNavigator<Destination: Equatable>: NSObject, UIAdaptivePresentationControllerDelegate, UINavigationControllerDelegate {
+    private var presentedVCWithoutNav = 0
     public private(set) var routes: [Destination] = [] {
         didSet {
-            print("--- routes: \(routes)")
+            print("---- Current route: \(routes)")
         }
     }
 
@@ -71,6 +72,7 @@ public extension BaseNavigator {
             }
             navigationControllers.append(navController)
         } else {
+            presentedVCWithoutNav += 1
             viewController.modalPresentationStyle = fullScreen ? .fullScreen : .automatic
             navigationControllers.last?.present(viewController, animated: true)
         }
@@ -116,17 +118,17 @@ public extension BaseNavigator {
                 let controllerIndex = destIndex - accumulatedIndex
                 if let viewControllerToPop = navController.viewControllers[safe: controllerIndex] {
                     let viewControllersPopped = navController.popToViewController(viewControllerToPop, animated: animated)
-                    guard navIndex != navigationControllers.count - 1 else {
+                    routes.removeLast((viewControllersPopped?.count ?? 0) + presentedVCWithoutNav)
+                    presentedVCWithoutNav = 0
+                    guard (navIndex + 1) < navigationControllers.endIndex else {
                         navController.dismiss(animated: animated)
-                        routes.removeLast((viewControllersPopped?.count ?? 0) + 1)
                         return
                     }
-                    navigationControllers[navIndex].dismiss(animated: animated)
                     navigationControllers[(navIndex + 1)...].forEach {
                         routes.removeLast($0.viewControllers.count)
                     }
                     navigationControllers.removeSubrange((navIndex + 1)...)
-                    routes.removeLast(viewControllersPopped?.count ?? 0)
+                    navController.dismiss(animated: animated)
                 }
                 break
             }

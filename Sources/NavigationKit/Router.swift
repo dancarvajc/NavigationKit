@@ -1,10 +1,3 @@
-//
-//  SwiftUIView.swift
-//
-//
-//  Created by Daniel Carvajal on 06-03-24.
-//
-
 import SwiftUI
 
 public struct Router<Destination: Equatable>: View {
@@ -28,7 +21,3 @@ struct NavigationControllerView: UIViewControllerRepresentable {
 
     func updateUIViewController(_: UINavigationController, context _: Context) {}
 }
-
-// #Preview {
-//    Router()
-// }
