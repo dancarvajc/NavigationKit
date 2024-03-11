@@ -1,14 +1,18 @@
+import Combine
 import SwiftUI
 import UIKit
+
+// TODO: Fix title flickkering when push a view. Se puede pasar el titulo por parametro al VC cuando hacemos push. Verificar otra forma.
 
 open class BaseNavigator<Destination: Equatable>: NSObject, UIAdaptivePresentationControllerDelegate, UINavigationControllerDelegate {
     private var presentedVCWithoutNav = 0
     public private(set) var routes: [Destination] = [] {
         didSet {
             print("---- Current route: \(routes)")
+            routesPublisher.send(routes)
         }
     }
-
+    public private(set) var routesPublisher = PassthroughSubject<[Destination], Never>()
     public private(set) var navigationControllers: [UINavigationController] = [UINavigationController()]
 
     override public init() {
@@ -94,6 +98,17 @@ public extension BaseNavigator {
         routes = destination
     }
 
+    // MARK: Revisar implementación frágil. Quizás por ahora siempre levantar con navController para asegurar una sync correcta del routes.
+    func dismiss(animated: Bool = true) {
+        navigationControllers.last?.dismiss(animated: animated)
+        routes.removeLast()
+        if presentedVCWithoutNav > 0 {
+          presentedVCWithoutNav -= 1
+        } else {
+          navigationControllers.removeLast()
+        }
+    }
+  
     func pop(animated: Bool = true) {
         guard routes.count > 1 else { return }
         navigationControllers.last?.popViewController(animated: animated)
