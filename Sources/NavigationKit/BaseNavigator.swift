@@ -14,6 +14,9 @@ open class BaseNavigator<Destination: Equatable>: NSObject, UIAdaptivePresentati
     }
     public private(set) var routesPublisher = PassthroughSubject<[Destination], Never>()
     public private(set) var navigationControllers: [UINavigationController] = [UINavigationController()]
+    public var lastVCisPresented: Bool {
+      return navigationControllers.last?.viewControllers.last?.presentingViewController != nil
+    }
 
     override public init() {
         super.init()
@@ -113,6 +116,15 @@ public extension BaseNavigator {
         guard routes.count > 1 else { return }
         navigationControllers.last?.popViewController(animated: animated)
         routes.removeLast()
+    }
+
+    func popOrDismiss(animated: Bool = true) {
+        if let navigationController = navigationControllers.last, navigationController.viewControllers.count > 1 {
+            pop()
+        } else {
+          guard lastVCisPresented else { return }
+          dismiss(animated: animated)
+        }
     }
 
     func popToRoot(animated: Bool = true) {
