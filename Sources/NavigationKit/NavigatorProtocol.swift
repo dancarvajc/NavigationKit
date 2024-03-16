@@ -19,6 +19,6 @@ public protocol NavigatorProtocol<Destination> {
     func pop(animated: Bool)
     func popOrDismiss(animated: Bool)
     func popToRoot(animated: Bool)
-    func popToRootInCurrentNav()
+    func popToRootInCurrentNav(animated: Bool)
     func popTo(_ destination: Destination, animated: Bool)
 }

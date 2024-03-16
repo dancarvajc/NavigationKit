@@ -160,8 +160,8 @@ public extension BaseNavigator {
         popTo(routes[0], animated: animated)
     }
 
-    func popToRootInCurrentNav() {
-        guard let viewControllersPopped = navigationControllers.last?.popToRootViewController(animated: true) else { return }
+    func popToRootInCurrentNav(animated: Bool = true) {
+        guard let viewControllersPopped = navigationControllers.last?.popToRootViewController(animated: animated) else { return }
         routes.removeLast(viewControllersPopped.count)
     }
 
