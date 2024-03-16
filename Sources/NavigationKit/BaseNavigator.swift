@@ -4,11 +4,19 @@ import UIKit
 
 // TODO: Fix title flickkering when push a view. Se puede pasar el titulo por parametro al VC cuando hacemos push. Verificar otra forma.
 
+private struct RouteInfo<Destination> {
+    let screen: Destination
+    let index: Int
+    let viewController: UIViewController
+    let navController: UINavigationController
+}
+
 open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, UIAdaptivePresentationControllerDelegate, UINavigationControllerDelegate {
     public private(set) var routes: [Destination] = [] {
         didSet {
-            print("---- Current route: \(routes)")
+            print("---- Current routes: \(routes.count)")
             routesPublisher.send(routes)
+            updateInternalRoutes(oldRoutes: oldValue)
         }
     }
 
@@ -16,6 +24,12 @@ open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, U
     public private(set) var navigationControllers: [UINavigationController] = [UINavigationController()]
     public var lastVCisPresented: Bool {
         return navigationControllers.last?.viewControllers.last?.presentingViewController != nil
+    }
+
+    private var _routes: [RouteInfo<Destination>] = [] {
+        didSet {
+            print("---- Current _routes: \(_routes.count)")
+        }
     }
 
     override public init() {
@@ -53,6 +67,22 @@ open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, U
 
     open func mapDestinationToView(_: Destination) -> any View {
         fatalError("mapDestinationToView(_:) has not been implemented")
+    }
+
+    private func updateInternalRoutes(oldRoutes: [Destination]) {
+        if routes.count > oldRoutes.count {
+            guard let currentScreen = routes.last,
+                  let navController = navigationControllers.last,
+                  let viewController = navController.viewControllers.last else { return }
+
+            let route = RouteInfo(screen: currentScreen,
+                                  index: routes.count - 1,
+                                  viewController: viewController,
+                                  navController: navController)
+            _routes.append(route)
+        } else {
+            _routes.removeLast()
+        }
     }
 }
 
@@ -96,8 +126,18 @@ public extension BaseNavigator {
 
     func dismiss(animated: Bool = true) {
         navigationControllers.last?.dismiss(animated: animated)
-        routes.removeLast()
         navigationControllers.removeLast()
+        routes.removeLast()
+    }
+
+    func dismissAll(animated _: Bool = true) {
+        /// Find the first NavController that a VC is presenting a modal, then pick the last VC it is presenting. Why not first, for some reason it picks the 1st VC even if it does a push.
+        let presentingVC = navigationControllers.first { $0.viewControllers.last?.presentedViewController != nil
+        }?.viewControllers.last { $0.presentedViewController != nil }
+
+        guard let presentingVC else { return }
+        guard let _route = _routes.first(where: { $0.viewController == presentingVC }) else { return }
+        popTo(_route.screen)
     }
 
     func pop(animated: Bool = true) {
