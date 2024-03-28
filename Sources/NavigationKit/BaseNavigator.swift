@@ -80,8 +80,8 @@ open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, U
                                   viewController: viewController,
                                   navController: navController)
             _routes.append(route)
-        } else {
-            _routes.removeLast()
+        } else if routes.count < oldRoutes.count {
+            _routes.removeLast(oldRoutes.count - routes.count)
         }
     }
 }
@@ -89,21 +89,21 @@ open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, U
 // MARK: - Navigation methods
 
 public extension BaseNavigator {
-    func push(_ destination: Destination) {
+    func push(_ destination: Destination, animated: Bool = true) {
         let view = mapDestinationToView(destination)
         let viewController = viewToViewController(view)
-        navigationControllers.last?.pushViewController(viewController, animated: true)
+        navigationControllers.last?.pushViewController(viewController, animated: animated)
         routes.append(destination)
     }
 
-    func present(_ destination: Destination, fullScreen: Bool = false) {
+    func present(_ destination: Destination, fullScreen: Bool = false, animated: Bool = true) {
         let view = mapDestinationToView(destination)
         let viewController = viewToViewController(view)
 
         let navController = UINavigationController(rootViewController: viewController)
         navController.modalPresentationStyle = fullScreen ? .fullScreen : .automatic
         navController.presentationController?.delegate = self
-        navigationControllers.last?.present(navController, animated: true) {
+        navigationControllers.last?.present(navController, animated: animated) {
             navController.delegate = self
         }
         navigationControllers.append(navController)
@@ -125,6 +125,7 @@ public extension BaseNavigator {
     }
 
     func dismiss(animated: Bool = true) {
+        guard lastVCisPresented else { return }
         navigationControllers.last?.dismiss(animated: animated)
         navigationControllers.removeLast()
         routes.removeLast()
@@ -165,30 +166,48 @@ public extension BaseNavigator {
         routes.removeLast(viewControllersPopped.count)
     }
 
+//    func popTo(_ destination: Destination, animated: Bool = true) {
+//        guard let destIndex = routes.lastIndex(of: destination) else { return }
+//        var accumulatedIndex = 0
+//        for (navIndex, navController) in navigationControllers.enumerated() {
+//            let nextAccumulatedIndex = accumulatedIndex + navController.viewControllers.count
+//            if destIndex <= nextAccumulatedIndex - 1 {
+//                let controllerIndex = destIndex - accumulatedIndex
+//                if let viewControllerToPop = navController.viewControllers[safe: controllerIndex] {
+//                    let viewControllersPopped = navController.popToViewController(viewControllerToPop, animated: animated)
+//                    routes.removeLast(viewControllersPopped?.count ?? 0)
+//                    guard (navIndex + 1) < navigationControllers.endIndex else {
+//                        navController.dismiss(animated: animated)
+//                        return
+//                    }
+//                    navigationControllers[(navIndex + 1)...].forEach {
+//                        routes.removeLast($0.viewControllers.count)
+//                    }
+//                    navigationControllers.removeSubrange((navIndex + 1)...)
+//                    navController.dismiss(animated: animated)
+//                }
+//                break
+//            }
+//            accumulatedIndex = nextAccumulatedIndex
+//        }
+//    }
+
     func popTo(_ destination: Destination, animated: Bool = true) {
-        guard let destIndex = routes.lastIndex(of: destination) else { return }
-        var accumulatedIndex = 0
-        for (navIndex, navController) in navigationControllers.enumerated() {
-            let nextAccumulatedIndex = accumulatedIndex + navController.viewControllers.count
-            if destIndex <= nextAccumulatedIndex - 1 {
-                let controllerIndex = destIndex - accumulatedIndex
-                if let viewControllerToPop = navController.viewControllers[safe: controllerIndex] {
-                    let viewControllersPopped = navController.popToViewController(viewControllerToPop, animated: animated)
-                    routes.removeLast(viewControllersPopped?.count ?? 0)
-                    guard (navIndex + 1) < navigationControllers.endIndex else {
-                        navController.dismiss(animated: animated)
-                        return
-                    }
-                    navigationControllers[(navIndex + 1)...].forEach {
-                        routes.removeLast($0.viewControllers.count)
-                    }
-                    navigationControllers.removeSubrange((navIndex + 1)...)
-                    navController.dismiss(animated: animated)
-                }
-                break
-            }
-            accumulatedIndex = nextAccumulatedIndex
+        guard let destRoute = _routes.first(where: { $0.screen == destination }) else { return }
+        guard let navIndex = navigationControllers.firstIndex(where: { $0 == destRoute.navController }) else { return }
+
+        let navController = destRoute.navController
+        let viewControllersPopped = navController.popToViewController(destRoute.viewController, animated: animated)
+        routes.removeLast(viewControllersPopped?.count ?? 0)
+        guard (navIndex + 1) < navigationControllers.endIndex else {
+            navController.dismiss(animated: animated)
+            return
         }
+        navigationControllers[(navIndex + 1)...].forEach {
+            routes.removeLast($0.viewControllers.count)
+        }
+        navigationControllers.removeSubrange((navIndex + 1)...)
+        navController.dismiss(animated: animated)
     }
 }
 

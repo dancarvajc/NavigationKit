@@ -12,8 +12,8 @@ public protocol NavigatorProtocol<Destination> {
 
     func start(_ destination: Destination)
     func mapDestinationToView(_ destination: Destination) -> any View
-    func push(_ destination: Destination)
-    func present(_ destination: Destination, fullScreen: Bool)
+    func push(_ destination: Destination, animated: Bool)
+    func present(_ destination: Destination, fullScreen: Bool, animated: Bool)
     func replaceStack(_ destinations: [Destination], animated: Bool)
     func dismiss(animated: Bool)
     func pop(animated: Bool)
