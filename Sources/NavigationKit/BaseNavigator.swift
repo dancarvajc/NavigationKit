@@ -96,11 +96,12 @@ public extension BaseNavigator {
         routes.append(destination)
     }
 
-    func present(_ destination: Destination, fullScreen: Bool = false, animated: Bool = true) {
+    func present(_ destination: Destination, fullScreen: Bool = false, animated: Bool = true, hideStatusBar: Bool = false) {
         let view = mapDestinationToView(destination)
         let viewController = viewToViewController(view)
 
-        let navController = UINavigationController(rootViewController: viewController)
+        let navController = HideableStatusBarNavController(rootViewController: viewController)
+        navController.isStatusBarHidden = hideStatusBar
         navController.modalPresentationStyle = fullScreen ? .fullScreen : .automatic
         navController.presentationController?.delegate = self
         navigationControllers.last?.present(navController, animated: animated) {
