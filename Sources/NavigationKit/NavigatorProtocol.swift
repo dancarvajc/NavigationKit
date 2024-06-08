@@ -16,6 +16,7 @@ public protocol NavigatorProtocol<Destination> {
     func present(_ destination: Destination, fullScreen: Bool, animated: Bool, hideStatusBar: Bool)
     func replaceStack(_ destinations: [Destination], animated: Bool)
     func dismiss(animated: Bool)
+    func dismissAll()
     func pop(animated: Bool)
     func popOrDismiss(animated: Bool)
     func popToRoot(animated: Bool)

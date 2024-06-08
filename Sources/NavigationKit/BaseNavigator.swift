@@ -2,63 +2,23 @@ import Combine
 import SwiftUI
 import UIKit
 
-// TODO: Fix title flickkering when push a view. Se puede pasar el titulo por parametro al VC cuando hacemos push. Verificar otra forma.
-
-private struct RouteInfo<Destination> {
-    let screen: Destination
-    let index: Int
-    let viewController: UIViewController
-    let navController: UINavigationController
-}
-
 open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, UIAdaptivePresentationControllerDelegate, UINavigationControllerDelegate {
-    public private(set) var routes: [Destination] = [] {
-        didSet {
-            print("---- Current routes: \(routes.count)")
-            routesPublisher.send(routes)
-            updateInternalRoutes(oldRoutes: oldValue)
-        }
-    }
-
     public private(set) var routesPublisher = PassthroughSubject<[Destination], Never>()
     public private(set) var navigationControllers: [UINavigationController] = [UINavigationController()]
     public var lastVCisPresented: Bool {
         return navigationControllers.last?.viewControllers.last?.presentingViewController != nil
     }
-
-    private var _routes: [RouteInfo<Destination>] = [] {
+    public private(set) var routes: [Destination] = [] {
         didSet {
-            print("---- Current _routes: \(_routes.count)")
+            routesPublisher.send(routes)
+            updateInternalRoutes(oldRoutes: oldValue)
         }
     }
+    private var _routes: [RouteInfo<Destination>] = []
 
     override public init() {
         super.init()
         navigationControllers[0].delegate = self
-    }
-
-    // MARK: - UIAdaptivePresentationControllerDelegate
-
-    public func presentationControllerDidDismiss(_: UIPresentationController) {
-        guard let navController = navigationControllers.last else { return }
-        routes.removeLast(navController.viewControllers.count)
-        navigationControllers.removeLast()
-    }
-
-    // MARK: - UINavigationControllerDelegate
-
-    public func navigationController(_ navigationController: UINavigationController, didShow _: UIViewController, animated _: Bool) {
-        guard let fromViewController =
-            navigationController.transitionCoordinator?.viewController(forKey: .from),
-            !navigationController.viewControllers.contains(fromViewController)
-        else { return }
-        guard let navIndex = navigationControllers.firstIndex(where: { $0 == navigationController }) else { return }
-        var viewControllerCount = 0
-        navigationControllers[..<navIndex].forEach { nav in
-            viewControllerCount += nav.viewControllers.count
-        }
-        guard routes.count - viewControllerCount > navigationController.viewControllers.count else { return }
-        routes.removeLast()
     }
 
     open func start(_ destination: Destination) {
@@ -83,6 +43,30 @@ open class BaseNavigator<Destination: Equatable>: NSObject, NavigatorProtocol, U
         } else if routes.count < oldRoutes.count {
             _routes.removeLast(oldRoutes.count - routes.count)
         }
+    }
+
+    // MARK: - UIAdaptivePresentationControllerDelegate
+
+    public func presentationControllerDidDismiss(_: UIPresentationController) {
+        guard let navController = navigationControllers.last else { return }
+        routes.removeLast(navController.viewControllers.count)
+        navigationControllers.removeLast()
+    }
+
+    // MARK: - UINavigationControllerDelegate
+
+    public func navigationController(_ navigationController: UINavigationController, didShow _: UIViewController, animated _: Bool) {
+        guard let fromViewController =
+            navigationController.transitionCoordinator?.viewController(forKey: .from),
+            !navigationController.viewControllers.contains(fromViewController)
+        else { return }
+        guard let navIndex = navigationControllers.firstIndex(where: { $0 == navigationController }) else { return }
+        var viewControllerCount = 0
+        navigationControllers[..<navIndex].forEach { nav in
+            viewControllerCount += nav.viewControllers.count
+        }
+        guard routes.count - viewControllerCount > navigationController.viewControllers.count else { return }
+        routes.removeLast()
     }
 }
 
@@ -132,7 +116,7 @@ public extension BaseNavigator {
         routes.removeLast()
     }
 
-    func dismissAll(animated _: Bool = true) {
+    func dismissAll() {
         /// Find the first NavController that a VC is presenting a modal, then pick the last VC it is presenting. Why not first, for some reason it picks the 1st VC even if it does a push.
         let presentingVC = navigationControllers.first { $0.viewControllers.last?.presentedViewController != nil
         }?.viewControllers.last { $0.presentedViewController != nil }
@@ -166,32 +150,6 @@ public extension BaseNavigator {
         guard let viewControllersPopped = navigationControllers.last?.popToRootViewController(animated: animated) else { return }
         routes.removeLast(viewControllersPopped.count)
     }
-
-//    func popTo(_ destination: Destination, animated: Bool = true) {
-//        guard let destIndex = routes.lastIndex(of: destination) else { return }
-//        var accumulatedIndex = 0
-//        for (navIndex, navController) in navigationControllers.enumerated() {
-//            let nextAccumulatedIndex = accumulatedIndex + navController.viewControllers.count
-//            if destIndex <= nextAccumulatedIndex - 1 {
-//                let controllerIndex = destIndex - accumulatedIndex
-//                if let viewControllerToPop = navController.viewControllers[safe: controllerIndex] {
-//                    let viewControllersPopped = navController.popToViewController(viewControllerToPop, animated: animated)
-//                    routes.removeLast(viewControllersPopped?.count ?? 0)
-//                    guard (navIndex + 1) < navigationControllers.endIndex else {
-//                        navController.dismiss(animated: animated)
-//                        return
-//                    }
-//                    navigationControllers[(navIndex + 1)...].forEach {
-//                        routes.removeLast($0.viewControllers.count)
-//                    }
-//                    navigationControllers.removeSubrange((navIndex + 1)...)
-//                    navController.dismiss(animated: animated)
-//                }
-//                break
-//            }
-//            accumulatedIndex = nextAccumulatedIndex
-//        }
-//    }
 
     func popTo(_ destination: Destination, animated: Bool = true) {
         guard let destRoute = _routes.first(where: { $0.screen == destination }) else { return }
